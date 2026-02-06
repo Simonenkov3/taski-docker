@@ -1,0 +1,49 @@
+version: '3.8'  # можно удалить (не критично)
+
+volumes:
+  pg_data:
+  static:
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  db:
+    image: postgres:13.10
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend/
+    env_file: .env
+    depends_on:
+      - db
+    networks:
+      - app-network
+    volumes:
+      - static:/backend_static  
+    # Убедитесь, что Gunicorn слушает 0.0.0.0:8000
+
+  frontend:
+    env_file: .env
+    build: ./frontend/
+    networks:
+      - app-network
+    command: cp -r /app/build/. /frontend_static/
+    volumes:
+      - static:/frontend_static  
+
+  gateway:
+    build: ./gateway/
+    ports:
+      - 8000:80
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    volumes:
+      - static:/staticfiles  
